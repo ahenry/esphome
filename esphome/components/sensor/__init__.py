@@ -68,6 +68,7 @@ ThrottleFilter = sensor_ns.class_('ThrottleFilter', Filter)
 DebounceFilter = sensor_ns.class_('DebounceFilter', Filter, cg.Component)
 HeartbeatFilter = sensor_ns.class_('HeartbeatFilter', Filter, cg.Component)
 DeltaFilter = sensor_ns.class_('DeltaFilter', Filter)
+DeltaFilter2 = sensor_ns.class_('DeltaFilter2', Filter)
 MaxDeltaFilter = sensor_ns.class_('MaxDeltaFilter', Filter)
 OrFilter = sensor_ns.class_('OrFilter', Filter)
 CalibrateLinearFilter = sensor_ns.class_('CalibrateLinearFilter', Filter)
@@ -102,6 +103,7 @@ SENSOR_SCHEMA = cv.MQTT_COMPONENT_SCHEMA.extend({
     }, cv.has_at_least_one_key(CONF_ABOVE, CONF_BELOW)),
 })
 
+<<<<<<< HEAD
 
 def sensor_schema(unit_of_measurement_, icon_, accuracy_decimals_):
     # type: (str, str, int) -> cv.Schema
@@ -178,7 +180,11 @@ DELTA_SCHEMA = cv.Any(
 
 @FILTER_REGISTRY.register('delta', DeltaFilter, DELTA_SCHEMA)
 def delta_filter_to_code(config, filter_id):
-    yield cg.new_Pvariable(filter_id, config[CONF_MINIMUM], conf[CONF_MAXIMUM])
+    conf = config[CONF_DELTA2]
+    if isinstance(conf, float): # simple (old) config
+        yield DeltaFilter2.new(conf, float('nan'))
+    else:
+        yield DeltaFilter2.new(conf[CONF_MINIMUM], conf[CONF_MAXIMUM])
 
 
 @FILTER_REGISTRY.register('range', RangeFilter, cv.Schema({
