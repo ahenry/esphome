@@ -8,7 +8,7 @@ from esphome.components import mqtt
 from esphome.components.mqtt import setup_mqtt_component
 import esphome.config_validation as cv
 from esphome.const import CONF_ABOVE, CONF_ACCURACY_DECIMALS, CONF_ALPHA, CONF_BELOW, \
-    CONF_CALIBRATE_LINEAR, CONF_DEBOUNCE, CONF_DELTA, CONF_MAX_DELTA, CONF_EXPIRE_AFTER, \
+    CONF_CALIBRATE_LINEAR, CONF_DEBOUNCE, CONF_DELTA, CONF_DELTA2, CONF_MAX_DELTA, CONF_EXPIRE_AFTER, \
     CONF_EXPONENTIAL_MOVING_AVERAGE, CONF_FILTERS, CONF_FILTER_OUT, CONF_FROM, \
     CONF_HEARTBEAT, CONF_ICON, CONF_ID, CONF_INTERNAL, CONF_LAMBDA, CONF_MQTT_ID, \
     CONF_MULTIPLY, CONF_OFFSET, CONF_ON_RAW_VALUE, CONF_ON_VALUE, CONF_ON_VALUE_RANGE, CONF_OR, \
@@ -40,8 +40,8 @@ def validate_send_first_at(value):
 
 FILTER_KEYS = [CONF_OFFSET, CONF_MULTIPLY, CONF_FILTER_OUT,
                CONF_SLIDING_WINDOW_MOVING_AVERAGE, CONF_EXPONENTIAL_MOVING_AVERAGE, CONF_LAMBDA,
-               CONF_THROTTLE, CONF_DELTA, CONF_MAX_DELTA, CONF_HEARTBEAT, CONF_DEBOUNCE, CONF_OR,
-               CONF_CALIBRATE_LINEAR, CONF_RANGE]
+               CONF_THROTTLE, CONF_DELTA, CONF_DELTA2, CONF_MAX_DELTA, CONF_HEARTBEAT, CONF_DEBOUNCE, 
+               CONF_OR, CONF_CALIBRATE_LINEAR, CONF_RANGE]
 
 
 def validate_datapoint(value):
@@ -81,6 +81,12 @@ FILTERS_SCHEMA = cv.ensure_list({
     vol.Optional(CONF_LAMBDA): cv.lambda_,
     vol.Optional(CONF_THROTTLE): cv.positive_time_period_milliseconds,
     vol.Optional(CONF_DELTA): cv.float_,
+    vol.Optional(CONF_DELTA2): vol.Any(
+        cv.float_,
+        cv.Schema({
+            vol.Optional(CONF_MINIMUM, default=float('nan')): cv.float_,
+            vol.Optional(CONF_MAXIMUM, default=float('nan')): cv.float_,
+        })),
     vol.Optional(CONF_MAX_DELTA): cv.float_,
     vol.Optional(CONF_UNIQUE): cv.invalid("The unique filter has been removed in 1.12, please "
                                           "replace with a delta filter with small value."),
@@ -120,6 +126,7 @@ ThrottleFilter = sensor_ns.class_('ThrottleFilter', Filter)
 DebounceFilter = sensor_ns.class_('DebounceFilter', Filter, Component)
 HeartbeatFilter = sensor_ns.class_('HeartbeatFilter', Filter, Component)
 DeltaFilter = sensor_ns.class_('DeltaFilter', Filter)
+DeltaFilter2 = sensor_ns.class_('DeltaFilter2', Filter)
 MaxDeltaFilter = sensor_ns.class_('MaxDeltaFilter', Filter)
 OrFilter = sensor_ns.class_('OrFilter', Filter)
 CalibrateLinearFilter = sensor_ns.class_('CalibrateLinearFilter', Filter)
@@ -173,6 +180,12 @@ def setup_filter(config):
         yield ThrottleFilter.new(config[CONF_THROTTLE])
     elif CONF_DELTA in config:
         yield DeltaFilter.new(config[CONF_DELTA])
+    elif CONF_DELTA2 in config:
+        conf = config[CONF_DELTA2]
+        if isinstance(conf, float): # simple (old) config
+            yield DeltaFilter2.new(conf, float('nan'))
+        else:
+            yield DeltaFilter2.new(conf[CONF_MINIMUM], conf[CONF_MAXIMUM])
     elif CONF_MAX_DELTA in config:
         yield MaxDeltaFilter.new(config[CONF_MAX_DELTA])
     elif CONF_OR in config:
