@@ -8,13 +8,13 @@ from esphome.components import mqtt
 from esphome.components.mqtt import setup_mqtt_component
 import esphome.config_validation as cv
 from esphome.const import CONF_ABOVE, CONF_ACCURACY_DECIMALS, CONF_ALPHA, CONF_BELOW, \
-    CONF_CALIBRATE_LINEAR, CONF_DEBOUNCE, CONF_DELTA, CONF_EXPIRE_AFTER, \
+    CONF_CALIBRATE_LINEAR, CONF_DEBOUNCE, CONF_DELTA, CONF_MAX_DELTA, CONF_EXPIRE_AFTER, \
     CONF_EXPONENTIAL_MOVING_AVERAGE, CONF_FILTERS, CONF_FILTER_OUT, CONF_FROM, \
     CONF_HEARTBEAT, CONF_ICON, CONF_ID, CONF_INTERNAL, CONF_LAMBDA, CONF_MQTT_ID, \
     CONF_MULTIPLY, CONF_OFFSET, CONF_ON_RAW_VALUE, CONF_ON_VALUE, CONF_ON_VALUE_RANGE, CONF_OR, \
-    CONF_SEND_EVERY, CONF_SEND_FIRST_AT, CONF_SLIDING_WINDOW_MOVING_AVERAGE, \
-    CONF_THROTTLE, CONF_TO, CONF_TRIGGER_ID, CONF_UNIQUE, CONF_UNIT_OF_MEASUREMENT, \
-    CONF_WINDOW_SIZE
+    CONF_RANGE, CONF_MINIMUM, CONF_MAXIMUM, CONF_SEND_EVERY, CONF_SEND_FIRST_AT, \
+    CONF_SLIDING_WINDOW_MOVING_AVERAGE, CONF_THROTTLE, CONF_TO, CONF_TRIGGER_ID, CONF_UNIQUE, \
+    CONF_UNIT_OF_MEASUREMENT, CONF_WINDOW_SIZE
 from esphome.core import CORE
 from esphome.cpp_generator import Pvariable, add, get_variable, process_lambda, templatable
 from esphome.cpp_types import App, Component, Nameable, PollingComponent, Trigger, \
@@ -40,8 +40,8 @@ def validate_send_first_at(value):
 
 FILTER_KEYS = [CONF_OFFSET, CONF_MULTIPLY, CONF_FILTER_OUT,
                CONF_SLIDING_WINDOW_MOVING_AVERAGE, CONF_EXPONENTIAL_MOVING_AVERAGE, CONF_LAMBDA,
-               CONF_THROTTLE, CONF_DELTA, CONF_HEARTBEAT, CONF_DEBOUNCE, CONF_OR,
-               CONF_CALIBRATE_LINEAR]
+               CONF_THROTTLE, CONF_DELTA, CONF_MAX_DELTA, CONF_HEARTBEAT, CONF_DEBOUNCE, CONF_OR,
+               CONF_CALIBRATE_LINEAR, CONF_RANGE]
 
 
 def validate_datapoint(value):
@@ -81,11 +81,16 @@ FILTERS_SCHEMA = cv.ensure_list({
     vol.Optional(CONF_LAMBDA): cv.lambda_,
     vol.Optional(CONF_THROTTLE): cv.positive_time_period_milliseconds,
     vol.Optional(CONF_DELTA): cv.float_,
+    vol.Optional(CONF_MAX_DELTA): cv.float_,
     vol.Optional(CONF_UNIQUE): cv.invalid("The unique filter has been removed in 1.12, please "
                                           "replace with a delta filter with small value."),
     vol.Optional(CONF_HEARTBEAT): cv.positive_time_period_milliseconds,
     vol.Optional(CONF_DEBOUNCE): cv.positive_time_period_milliseconds,
     vol.Optional(CONF_OR): validate_recursive_filter,
+    vol.Optional(CONF_RANGE): cv.Schema({
+        vol.Optional(CONF_MINIMUM, default=float('nan')): cv.float_,
+        vol.Optional(CONF_MAXIMUM, default=float('nan')): cv.float_,
+    })
 }, cv.has_exactly_one_key(*FILTER_KEYS))
 
 # Base
@@ -115,8 +120,10 @@ ThrottleFilter = sensor_ns.class_('ThrottleFilter', Filter)
 DebounceFilter = sensor_ns.class_('DebounceFilter', Filter, Component)
 HeartbeatFilter = sensor_ns.class_('HeartbeatFilter', Filter, Component)
 DeltaFilter = sensor_ns.class_('DeltaFilter', Filter)
+MaxDeltaFilter = sensor_ns.class_('MaxDeltaFilter', Filter)
 OrFilter = sensor_ns.class_('OrFilter', Filter)
 CalibrateLinearFilter = sensor_ns.class_('CalibrateLinearFilter', Filter)
+RangeFilter = sensor_ns.class_('RangeFilter', Filter)
 SensorInRangeCondition = sensor_ns.class_('SensorInRangeCondition', Filter)
 
 SENSOR_SCHEMA = cv.MQTT_COMPONENT_SCHEMA.extend({
@@ -166,6 +173,8 @@ def setup_filter(config):
         yield ThrottleFilter.new(config[CONF_THROTTLE])
     elif CONF_DELTA in config:
         yield DeltaFilter.new(config[CONF_DELTA])
+    elif CONF_MAX_DELTA in config:
+        yield MaxDeltaFilter.new(config[CONF_MAX_DELTA])
     elif CONF_OR in config:
         for filters in setup_filters(config[CONF_OR]):
             yield None
@@ -179,6 +188,9 @@ def setup_filter(config):
         y = [conf[CONF_TO] for conf in config[CONF_CALIBRATE_LINEAR]]
         k, b = fit_linear(x, y)
         yield CalibrateLinearFilter.new(k, b)
+    elif CONF_RANGE in config:
+        conf = config[CONF_RANGE]
+        yield RangeFilter.new(conf[CONF_MINIMUM], conf[CONF_MAXIMUM])
 
 
 def setup_filters(config):
