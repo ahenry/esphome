@@ -23,10 +23,8 @@ def validate_send_first_at(value):
                          "".format(send_first_at, send_every))
     return value
 
-
 FILTER_REGISTRY = Registry()
 validate_filters = cv.validate_registry('filter', FILTER_REGISTRY)
-
 
 def validate_datapoint(value):
     if isinstance(value, dict):
@@ -43,7 +41,6 @@ def validate_datapoint(value):
         CONF_FROM: cv.float_(a),
         CONF_TO: cv.float_(b)
     })
-
 
 # Base
 sensor_ns = cg.esphome_ns.namespace('sensor')
@@ -71,9 +68,11 @@ ThrottleFilter = sensor_ns.class_('ThrottleFilter', Filter)
 DebounceFilter = sensor_ns.class_('DebounceFilter', Filter, cg.Component)
 HeartbeatFilter = sensor_ns.class_('HeartbeatFilter', Filter, cg.Component)
 DeltaFilter = sensor_ns.class_('DeltaFilter', Filter)
+MaxDeltaFilter = sensor_ns.class_('MaxDeltaFilter', Filter)
 OrFilter = sensor_ns.class_('OrFilter', Filter)
 CalibrateLinearFilter = sensor_ns.class_('CalibrateLinearFilter', Filter)
 CalibratePolynomialFilter = sensor_ns.class_('CalibratePolynomialFilter', Filter)
+RangeFilter = sensor_ns.class_('RangeFilter', Filter)
 SensorInRangeCondition = sensor_ns.class_('SensorInRangeCondition', Filter)
 
 unit_of_measurement = cv.string_strict
@@ -169,10 +168,25 @@ def lambda_filter_to_code(config, filter_id):
                                       return_type=cg.optional.template(float))
     yield cg.new_Pvariable(filter_id, lambda_)
 
+DELTA_SCHEMA = cv.Any(
+    cv.float_,
+    cv.Schema({
+        cv.Optional(CONF_MINIMUM, default=0.0): cv.float_,
+        cv.Optional(CONF_MAXIMUM, default=float('inf')): cv.float_,
+}))
 
-@FILTER_REGISTRY.register('delta', DeltaFilter, cv.float_)
+
+@FILTER_REGISTRY.register('delta', DeltaFilter, DELTA_SCHEMA)
 def delta_filter_to_code(config, filter_id):
-    yield cg.new_Pvariable(filter_id, config)
+    yield cg.new_Pvariable(filter_id, config[CONF_MINIMUM], conf[CONF_MAXIMUM])
+
+
+@FILTER_REGISTRY.register('range', RangeFilter, cv.Schema({
+    cv.Optional(CONF_MINIMUM, default=float('nan')): cv.float_,
+    cv.Optional(CONF_MAXIMUM, default=float('nan')): cv.float_,
+}))
+def range_filter_to_code(config, filter_id):
+    yield cg.new_Pvariable(filter_id, config[CONF_MINIMUM], conf[CONF_MAXIMUM])
 
 
 @FILTER_REGISTRY.register('or', OrFilter, validate_filters)
