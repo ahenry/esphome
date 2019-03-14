@@ -5,10 +5,10 @@ import esphome.config_validation as cv
 from esphome import automation
 from esphome.components import mqtt
 from esphome.const import CONF_ABOVE, CONF_ACCURACY_DECIMALS, CONF_ALPHA, CONF_BELOW, \
-    CONF_EXPIRE_AFTER, CONF_FILTERS, CONF_FROM, CONF_ICON, CONF_ID, CONF_INTERNAL, \
-    CONF_ON_RAW_VALUE, CONF_ON_VALUE, CONF_ON_VALUE_RANGE, CONF_SEND_EVERY, CONF_SEND_FIRST_AT, \
-    CONF_TO, CONF_TRIGGER_ID, CONF_UNIT_OF_MEASUREMENT, CONF_WINDOW_SIZE, CONF_NAME, CONF_MQTT_ID, \
-    CONF_FORCE_UPDATE
+    CONF_DELTA, CONF_EXPIRE_AFTER, CONF_FILTERS, CONF_FROM, CONF_ICON, CONF_ID, CONF_INTERNAL, \
+    CONF_MAXIMUM, CONF_MINIMUM, CONF_ON_RAW_VALUE, CONF_ON_VALUE, CONF_ON_VALUE_RANGE, \
+    CONF_SEND_EVERY, CONF_SEND_FIRST_AT, CONF_TO, CONF_TRIGGER_ID, CONF_UNIT_OF_MEASUREMENT, \
+    CONF_WINDOW_SIZE, CONF_NAME, CONF_MQTT_ID, CONF_FORCE_UPDATE
 from esphome.core import CORE, coroutine, coroutine_with_priority
 from esphome.util import Registry
 
@@ -68,8 +68,6 @@ ThrottleFilter = sensor_ns.class_('ThrottleFilter', Filter)
 DebounceFilter = sensor_ns.class_('DebounceFilter', Filter, cg.Component)
 HeartbeatFilter = sensor_ns.class_('HeartbeatFilter', Filter, cg.Component)
 DeltaFilter = sensor_ns.class_('DeltaFilter', Filter)
-DeltaFilter2 = sensor_ns.class_('DeltaFilter2', Filter)
-MaxDeltaFilter = sensor_ns.class_('MaxDeltaFilter', Filter)
 OrFilter = sensor_ns.class_('OrFilter', Filter)
 CalibrateLinearFilter = sensor_ns.class_('CalibrateLinearFilter', Filter)
 CalibratePolynomialFilter = sensor_ns.class_('CalibratePolynomialFilter', Filter)
@@ -103,7 +101,6 @@ SENSOR_SCHEMA = cv.MQTT_COMPONENT_SCHEMA.extend({
     }, cv.has_at_least_one_key(CONF_ABOVE, CONF_BELOW)),
 })
 
-<<<<<<< HEAD
 
 def sensor_schema(unit_of_measurement_, icon_, accuracy_decimals_):
     # type: (str, str, int) -> cv.Schema
