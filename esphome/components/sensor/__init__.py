@@ -167,21 +167,21 @@ def lambda_filter_to_code(config, filter_id):
                                       return_type=cg.optional.template(float))
     yield cg.new_Pvariable(filter_id, lambda_)
 
+
 DELTA_SCHEMA = cv.Any(
     cv.float_,
     cv.Schema({
         cv.Optional(CONF_MINIMUM, default=0.0): cv.float_,
-        cv.Optional(CONF_MAXIMUM, default=float('inf')): cv.float_,
-}))
+        cv.Optional(CONF_MAXIMUM, default=float('inf')): cv.float_, })
+)
 
 
 @FILTER_REGISTRY.register('delta', DeltaFilter, DELTA_SCHEMA)
 def delta_filter_to_code(config, filter_id):
-    conf = config[CONF_DELTA2]
-    if isinstance(conf, float): # simple (old) config
-        yield DeltaFilter2.new(conf, float('nan'))
+    if isinstance(config, float): # simple (old) config
+        yield DeltaFilter.new(config, float('nan'))
     else:
-        yield DeltaFilter2.new(conf[CONF_MINIMUM], conf[CONF_MAXIMUM])
+        yield DeltaFilter.new(config[CONF_MINIMUM], config[CONF_MAXIMUM])
 
 
 @FILTER_REGISTRY.register('range', RangeFilter, cv.Schema({
@@ -189,7 +189,7 @@ def delta_filter_to_code(config, filter_id):
     cv.Optional(CONF_MAXIMUM, default=float('nan')): cv.float_,
 }))
 def range_filter_to_code(config, filter_id):
-    yield cg.new_Pvariable(filter_id, config[CONF_MINIMUM], conf[CONF_MAXIMUM])
+    yield cg.new_Pvariable(filter_id, config[CONF_MINIMUM], config[CONF_MAXIMUM])
 
 
 @FILTER_REGISTRY.register('or', OrFilter, validate_filters)
