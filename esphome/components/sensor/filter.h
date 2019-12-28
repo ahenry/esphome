@@ -228,15 +228,50 @@ class HeartbeatFilter : public Filter, public Component {
   bool has_value_{false};
 };
 
+/* This class filters out values which are either not different
+   enough, or too different from the previous value.  In order to
+   not break existing configuration for the DeltaFilter, two constructors
+   are provided, one that sets both deltas, and one that sets min_delta
+   and initializes max_delta to +Inf (I don't know if this this necessary,
+   is source-level back-compat an issue, or just config-level?)
+
+    filters:
+      - delta:
+          minimum: 0.1
+          maximum: 5
+    
+    The following two are the same
+
+    filters:
+      -delta:
+        minimum: 5
+
+    filters:
+      -delta: 5
+
+    As are the next two
+
+    filters:
+      -delta:
+        minimum: 0
+        maximum: 20
+
+    filters:
+      -delta:
+        maximum: 20
+*/
+
 class DeltaFilter : public Filter {
- public:
-  explicit DeltaFilter(float min_delta);
+  public:
+    explicit DeltaFilter(float min_delta, float max_delta);
+    explicit DeltaFilter(float min_delta);
 
-  optional<float> new_value(float value) override;
+    optional<float> new_value(float value) override;
 
- protected:
-  float min_delta_;
-  float last_value_{NAN};
+  protected:
+    float min_delta_;
+    float max_delta_;
+    float last_value_{NAN};
 };
 
 class OrFilter : public Filter {
@@ -280,6 +315,16 @@ class CalibratePolynomialFilter : public Filter {
 
  protected:
   std::vector<float> coefficients_;
+};
+
+class RangeFilter : public Filter {
+  public:
+   RangeFilter(float min, float max);
+   optional<float> new_value(float value) override;
+
+   protected:
+    float min_;
+    float max_;
 };
 
 }  // namespace sensor

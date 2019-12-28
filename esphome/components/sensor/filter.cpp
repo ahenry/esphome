@@ -190,17 +190,35 @@ optional<float> ThrottleFilter::new_value(float value) {
 }
 
 // DeltaFilter
-DeltaFilter::DeltaFilter(float min_delta) : min_delta_(min_delta), last_value_(NAN) {}
+DeltaFilter::DeltaFilter(float min_delta, float max_delta) 
+    : min_delta_(min_delta), max_delta_(max_delta), last_value_(NAN) {}
+
+DeltaFilter::DeltaFilter(float min_delta) 
+    : min_delta_(min_delta), max_delta_(INFINITY), last_value_(NAN) {}
+
 optional<float> DeltaFilter::new_value(float value) {
   if (isnan(value))
     return {};
   if (isnan(this->last_value_)) {
     return this->last_value_ = value;
   }
-  if (fabsf(value - this->last_value_) >= this->min_delta_) {
-    return this->last_value_ = value;
+
+  // I guess the isnan checks aren't really required if the yaml is the supported way to call this code,
+  //  but some defensiveness is not a bad thing
+  // if min_delta is defined and the delta isn't large enough
+  if (!isnan(this->min_delta_) && fabsf(value - this->last_value_) < this->min_delta_) {
+    ESP_LOGI(TAG, "DeltaFilter rejected reading %f, with previous value %f and a minumum delta of %f", 
+        value, this->last_value_, this->min_delta_);
+    return {};
   }
-  return {};
+  // if max_delta is defined and the delta is too large
+  if (!isnan(this->max_delta_) && fabsf(value - this->last_value_) > this->max_delta_) {
+    ESP_LOGI(TAG, "DeltaFilter rejected reading %f, with previous value %f and a maximum delta of %f", 
+        value, this->last_value_, this->max_delta_);
+    return {};
+  }
+
+  return this->last_value_ = value;
 }
 
 // OrFilter
@@ -278,6 +296,20 @@ optional<float> CalibratePolynomialFilter::new_value(float value) {
     x *= value;
   }
   return res;
+}
+
+// RangeFilter
+RangeFilter::RangeFilter(float min, float max) : min_(min), max_(max) {}
+
+optional<float> RangeFilter::new_value(float value) {
+  if (isnan(value))
+    return {};
+  
+  if ((isnan(this->min_) || value >= this->min_) && (isnan(this->max_) || value <= this->max_))
+    return value;
+
+  ESP_LOGI(TAG, "Range Filter rejected reading %f as not in range [%f, %f]", value, this->min_, this->max_);
+  return {};
 }
 
 }  // namespace sensor
