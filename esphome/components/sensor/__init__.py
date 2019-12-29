@@ -72,7 +72,6 @@ OrFilter = sensor_ns.class_('OrFilter', Filter)
 CalibrateLinearFilter = sensor_ns.class_('CalibrateLinearFilter', Filter)
 CalibratePolynomialFilter = sensor_ns.class_('CalibratePolynomialFilter', Filter)
 RangeFilter = sensor_ns.class_('RangeFilter', Filter)
-
 SensorInRangeCondition = sensor_ns.class_('SensorInRangeCondition', Filter)
 
 unit_of_measurement = cv.string_strict
